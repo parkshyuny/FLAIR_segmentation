@@ -6,13 +6,13 @@ from pathlib import Path
 from torch.utils.data import Dataset
 
 class PetDataset(Dataset):
-    def __init__(self, image_dir: Path, mask_dir: Path):
+    def __init__(self, image_dir: Path, mask_dir: Path, image_size: int):
         self.image_dir = image_dir
         self.mask_dir = mask_dir
         self.file_names = sorted([
             f for f in os.listdir(image_dir) if f.endswith("jpg")
         ])
-        self.dim = 256
+        self.dim = image_size
 
     def __len__(self):
         return len(self.image_dir)
@@ -27,7 +27,7 @@ class PetDataset(Dataset):
         image = self._load_image(image_path)
         mask = self._load_mask(mask_path)
         
-        return dict(image=image, mask=mask)
+        return image, mask
     
     def _load_image(self, image_path: Path):
         image = cv2.imread(image_path)
