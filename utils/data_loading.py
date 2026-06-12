@@ -1,45 +1,108 @@
 import cv2
 import numpy as np
 import os
+import random
 
 from pathlib import Path
 from torch.utils.data import Dataset
+from torchvision import transforms
 
-class PetDataset(Dataset):
-    def __init__(self, image_dir: Path, mask_dir: Path, image_size: int):
-        self.image_dir = image_dir
-        self.mask_dir = mask_dir
-        self.file_names = sorted([
-            f for f in os.listdir(image_dir) if f.endswith("jpg")
-        ])
-        self.dim = image_size
+class FLAIRDataset(Dataset):
+    """
+    This dataset contains brain MR images together with manual FLAIR abnormality segmentation masks.
+    The images were obtained from The Cancer Imaging Archive (TCIA).
 
-    def __len__(self):
-        return len(self.image_dir)
+    Dataset is publicly available on Kaggle: https://www.kaggle.com/datasets/mateuszbuda/lgg-mri-segmentation/data
+    """
+    def __init__(
+        self, 
+        images_dir,
+        image_size=256,
+        subset="validation",
+        validation_cases=10,
+        random_sampling=True,
+        seed=111,
+    ):
+        random.seed(seed)
 
-    def __getitem__(self, index):
-        image_path = os.path.join(self.image_dir[index], self.file_names[index])
-        mask_path = os.path.join(
-            self.mask_dir, 
-            self.file_names[index].replace("jpg", "png")
+        # Load images and masks
+        volumes = {}
+        masks = {}
+        for (dirpath, dirnames, filenames) in os.walk(images_dir):
+            image_slices = []
+            mask_slices = []
+            for filename in sorted(
+                filter(lambda f: ".tif" in f, filenames),
+                key=lambda x: x.split(".")[0].split("_")[4],
+            ):
+                filepath = os.path.join(dirpath, filename)
+                if "mask" in filename:
+                    mask = cv2.imread(filepath)
+                    mask = cv2.cvtColor(mask, cv2.COLOR_BGR2GRAY)
+                    mask_slices.append(mask)
+                else:
+                    image = cv2.imread(filepath)
+                    image_slices.append(image)
+
+            if (image_slices):
+                patient = dirpath.split("/")[-1]
+                volumes[patient] = np.array(image_slices[1:-1])
+                masks[patient] = np.array(mask_slices[1:-1])
+        
+        self.patients = sorted(volumes.keys())
+
+        # Select cases for the subset
+        if not subset == "all":
+            validation_patients = random.sample(self.patients, k=validation_cases)
+            if subset == "validation":
+                self.patients = validation_patients
+            else:
+                self.patients = list(set(self.patients).difference(validation_patients))
+
+        self.volumes = [(volumes[k], masks[k]) for k in self.patients]
+        self.volumes = [(v, m[..., np.newaxis]) for (v, m) in self.volumes]
+        
+        # Create global index for patient and slice (idx -> (p_idx, s_idx))
+        num_slices = [v.shape[0] for v, _ in self.volumes]
+        self.patient_slice_index = list(
+            zip(
+                sum([[i] * num_slices[i] for i in range(len(num_slices))], []),
+                sum(list(range(n) for n in num_slices), [])
+            )
         )
 
-        image = self._load_image(image_path)
-        mask = self._load_mask(mask_path)
-        
+        self.random_sampling = random_sampling
+        self.seed = seed
+        self.image_size = image_size
+
+    def __len__(self):
+        return len(self.patient_slice_index)
+
+    def __getitem__(self, index):
+        p_idx = self.patient_slice_index[index][0]
+        s_idx = self.patient_slice_index[index][1]
+
+        v, m = self.volumes[p_idx]
+        image = v[s_idx]
+        mask = m[s_idx]
+
+        mean = np.mean(v, axis=(0, 1, 2))
+        std = np.std(v, axis=(0, 1, 2))
+        transform_list = [
+            transforms.ToTensor(),
+            transforms.Resize((self.image_size, self.image_size)),
+            transforms.Normalize(mean, std),
+        ]
+        transform = transforms.Compose(transform_list)
+        image, mask = transform((image, mask))
+    
+        image = image.transpose(2, 0, 1)
+        mask = image.transpose(2, 0, 1)
+
         return image, mask
     
     def _load_image(self, image_path: Path):
-        image = cv2.imread(image_path)
-        image = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
-        image = cv2.resize((image, self.dim, self.dim))
-
-        return image
+        pass
 
     def _load_mask(self, mask_path: Path):
-        mask = np.array(cv2.imread(mask_path))
-        mask = mask.astype(np.float32)
-        mask = mask.resize(mask, (self.dim, self.dim))
-
-        binary_mask = np.where(mask == 2, 0.0, 1.0)
-        return binary_mask
+        pass
