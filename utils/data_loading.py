@@ -67,7 +67,7 @@ class FLAIRDataset(Dataset):
         self.patient_slice_index = list(
             zip(
                 sum([[i] * num_slices[i] for i in range(len(num_slices))], []),
-                sum(list(range(n) for n in num_slices), [])
+                sum([list(range(x)) for x in num_slices], []),
             )
         )
 
@@ -83,26 +83,26 @@ class FLAIRDataset(Dataset):
         s_idx = self.patient_slice_index[index][1]
 
         v, m = self.volumes[p_idx]
+        v = self._normalize_volume(v)
+    
         image = v[s_idx]
         mask = m[s_idx]
 
-        mean = np.mean(v, axis=(0, 1, 2))
-        std = np.std(v, axis=(0, 1, 2))
         transform_list = [
             transforms.ToTensor(),
             transforms.Resize((self.image_size, self.image_size)),
-            transforms.Normalize(mean, std),
+
         ]
         transform = transforms.Compose(transform_list)
-        image, mask = transform((image, mask))
-    
-        image = image.transpose(2, 0, 1)
-        mask = image.transpose(2, 0, 1)
+        image = transform(image)
+        mask = transform(mask)
 
         return image, mask
-    
-    def _load_image(self, image_path: Path):
-        pass
 
-    def _load_mask(self, mask_path: Path):
-        pass
+    def _normalize_volume(self, volumes):
+        mean = np.mean(volumes, axis=(0, 1, 2))
+        std = np.std(volumes, axis=(0, 1, 2))
+        volumes = (volumes - mean) / std
+
+        return volumes
+    
