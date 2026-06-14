@@ -17,13 +17,13 @@ class FLAIRDataset(Dataset):
     def __init__(
         self, 
         images_dir,
+        subset,
         image_size=256,
-        subset="validation",
         validation_cases=10,
         random_sampling=True,
         seed=111,
     ):
-        random.seed(seed)
+        random.seed(seed)    
 
         # Load images and masks
         volumes = {}
@@ -51,13 +51,12 @@ class FLAIRDataset(Dataset):
         
         self.patients = sorted(volumes.keys())
 
-        # Select cases for the subset
-        if not subset == "all":
-            validation_patients = random.sample(self.patients, k=validation_cases)
-            if subset == "validation":
-                self.patients = validation_patients
-            else:
-                self.patients = list(set(self.patients).difference(validation_patients))
+        # Select cases (100 train, 10 validation cases)
+        validation_patients = random.sample(self.patients, k=validation_cases)
+        if subset == "validation":
+            self.patients = validation_patients
+        else:
+            self.patients = list(set(self.patients).difference(validation_patients))
 
         self.volumes = [(volumes[k], masks[k]) for k in self.patients]
         self.volumes = [(v, m[..., np.newaxis]) for (v, m) in self.volumes]

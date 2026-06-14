@@ -1,4 +1,5 @@
 import argparse
+import numpy as np
 import torch
 import torch.optim as optim
 import os
@@ -6,9 +7,8 @@ import os
 from utils.data_loading import FLAIRDataset
 from utils.loss import DiceLoss
 from torch.utils.data import DataLoader
-from torchinfo import summary
 from tqdm import tqdm
-from logger import Logger
+from utils.logger import Logger
 from unet import UNet
 
 torch.manual_seed(111)
@@ -26,27 +26,49 @@ def main(args):
     loss_valid = []
 
     optimizer = optim.Adam(unet.parameters(), lr=args.lr)
+    step = 0
 
     logger = Logger(args.logs)
-
-    for epoch in tqdm(range(args.epochs), total=len(args.epochs)):
-        for phase in ["train", "valid"]:
-            if phase == "train":
+    
+    for epoch in tqdm(range(args.epochs), total=args.epochs):
+        for mode in ["train", "valid"]:
+            if mode == "train":
                 unet.train()
             else:
                 unet.eval()
             
-            ...
+            for i, data in enumerate(loaders[mode]):
+                optimizer.zero_grad()
+
+                X, y_true = data
+                y_pred = unet(X)
+
+                loss = dsc_loss(y_true, y_pred)
+                if mode == "train":
+                    loss_train.append(loss.item())
+                    loss.backward()
+                    optimizer.step()
+                    step += 1
+                else:
+                    loss_valid.append(loss.item())
+            
+                if (i + 1) % 10 == 0:
+                    if mode == "train":
+                        logger.scalar_summary(loss_train, step, "train_")
+                        loss_train = []
+                    else:
+                        logger.scalar_summary(loss_valid, step, prefix="val_")
+                        loss_valid = []
 
 def data_loaders(args):
-    dataset_train = FLAIRDataset(image_size=args.images_dir, subset="train")
+    dataset_train = FLAIRDataset(args.images_dir, "train")
     loader_train = DataLoader(
         dataset_train,
         batch_size=args.batch_size,
         shuffle=True,
     )
 
-    dataset_valid = FLAIRDataset(image_size=args.images_dir, subset="validation")
+    dataset_valid = FLAIRDataset(args.images_dir, "validation")
     loader_valid = DataLoader(
         dataset_valid,
         batch_size=args.batch_size,
