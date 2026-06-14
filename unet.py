@@ -46,8 +46,10 @@ class EncoderBlock(nn.Module):
 
         self.down_convolution = nn.Sequential(
             nn.Conv2d(in_channels, out_channels, (3, 3), padding=1),
+            nn.BatchNorm2d(out_channels),
             nn.ReLU(True),
             nn.Conv2d(out_channels, out_channels, (3, 3), padding=1),
+            nn.BatchNorm2d(out_channels),
             nn.ReLU(True),
         )
 
@@ -71,3 +73,9 @@ class DecoderBlock(nn.Module):
         out_up = self.up_convolution(x)
         x = torch.cat([out_up, out_down], 1)
         return self.conv(x)
+
+
+# from torchinfo import summary
+
+# model = UNet()
+# summary(model, input_size=(1, 3, 256, 256))
