@@ -4,7 +4,7 @@ import torch
 import torch.optim as optim
 import os
 
-from utils.data_loading import FLAIRDataset
+from dataset import FLAIRDataset
 from utils.loss import DiceLoss
 from torch.utils.data import DataLoader
 from tqdm import tqdm

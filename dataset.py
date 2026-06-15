@@ -37,11 +37,12 @@ class FLAIRDataset(Dataset):
             ):
                 filepath = os.path.join(dirpath, filename)
                 if "mask" in filename:
-                    mask = cv2.imread(filepath)
-                    mask = cv2.cvtColor(mask, cv2.COLOR_BGR2GRAY)
+                    mask = cv2.imread(filepath, cv2.IMREAD_GRAYSCALE)
+                    mask = mask.astype(np.float32)
                     mask_slices.append(mask)
                 else:
-                    image = cv2.imread(filepath)
+                    image = cv2.imread(filepath, cv2.IMREAD_COLOR_RGB)
+                    image = cv2.normalize(image, None, 0, 1.0, cv2.NORM_MINMAX, cv2.CV_32F)
                     image_slices.append(image)
 
             if (image_slices):
@@ -82,7 +83,7 @@ class FLAIRDataset(Dataset):
         s_idx = self.patient_slice_index[index][1]
 
         v, m = self.volumes[p_idx]
-        v = self._normalize_volume(v)
+        # v = self._normalize_volume(v)
     
         image = v[s_idx]
         mask = m[s_idx]
