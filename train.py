@@ -16,7 +16,7 @@ torch.manual_seed(111)
 def main(args):
     make_dirs(args)
 
-    loader_train, loader_valid = data_loaders(args)
+    loader_train, loader_valid = data_loaders(args.image_dir, args.batch_size)
     loaders = {"train": loader_train, "valid": loader_valid}
 
     unet = UNet()
@@ -60,18 +60,18 @@ def main(args):
                         logger.scalar_summary(loss_valid, step, prefix="val_")
                         loss_valid = []
 
-def data_loaders(args):
-    dataset_train = FLAIRDataset(args.images_dir, "train")
+def data_loaders(images_dir, batch_size):
+    dataset_train = FLAIRDataset(images_dir, "train")
     loader_train = DataLoader(
         dataset_train,
-        batch_size=args.batch_size,
+        batch_size=batch_size,
         shuffle=True,
     )
 
-    dataset_valid = FLAIRDataset(args.images_dir, "validation")
+    dataset_valid = FLAIRDataset(images_dir, "validation")
     loader_valid = DataLoader(
         dataset_valid,
-        batch_size=args.batch_size,
+        batch_size=batch_size,
         shuffle=True,
     )
     
