@@ -2,6 +2,7 @@ import cv2
 import numpy as np
 import os
 import random
+import torch
 
 from pathlib import Path
 from torch.utils.data import Dataset
@@ -19,7 +20,7 @@ class FLAIRDataset(Dataset):
         images_dir,
         subset,
         image_size=256,
-        validation_cases=10,
+        validation_cases=1,
         random_sampling=True,
         seed=111,
     ):
@@ -28,7 +29,7 @@ class FLAIRDataset(Dataset):
         # Load images and masks
         volumes = {}
         masks = {}
-        for (dirpath, dirnames, filenames) in os.walk(images_dir):
+        for (dirpath, _, filenames) in os.walk(images_dir):
             image_slices = []
             mask_slices = []
             for filename in sorted(
@@ -42,7 +43,6 @@ class FLAIRDataset(Dataset):
                     mask_slices.append(mask)
                 else:
                     image = cv2.imread(filepath, cv2.IMREAD_COLOR_RGB)
-                    image = cv2.normalize(image, None, 0, 1.0, cv2.NORM_MINMAX, cv2.CV_32F)
                     image_slices.append(image)
 
             if (image_slices):
@@ -83,7 +83,6 @@ class FLAIRDataset(Dataset):
         s_idx = self.patient_slice_index[index][1]
 
         v, m = self.volumes[p_idx]
-        # v = self._normalize_volume(v)
     
         image = v[s_idx]
         mask = m[s_idx]
@@ -91,18 +90,9 @@ class FLAIRDataset(Dataset):
         transform_list = [
             transforms.ToTensor(),
             transforms.Resize((self.image_size, self.image_size)),
-
         ]
         transform = transforms.Compose(transform_list)
         image = transform(image)
-        mask = transform(mask)
 
         return image, mask
-
-    def _normalize_volume(self, volumes):
-        mean = np.mean(volumes, axis=(0, 1, 2))
-        std = np.std(volumes, axis=(0, 1, 2))
-        volumes = (volumes - mean) / std
-
-        return volumes
     

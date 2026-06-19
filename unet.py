@@ -38,6 +38,8 @@ class UNet(nn.Module):
         up_4 = self.up_convolution_4(up_3, down_1)
 
         out = self.out(up_4)
+        out = torch.sigmoid(out)
+        
         return out
         
 class EncoderBlock(nn.Module):
