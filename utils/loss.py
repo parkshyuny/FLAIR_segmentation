@@ -1,5 +1,4 @@
 from torch import nn
-import torch
 
 def dice_score(y_pred, y_true):
     y_pred = y_pred.contiguous().view(-1)
