@@ -1,4 +1,3 @@
-import albumentations as A
 import cv2
 import numpy as np
 import os
@@ -21,15 +20,18 @@ class FLAIRDataset(Dataset):
         IMAGES_DIR,
         SUBSET,
         IMAGE_SIZE=256,
-        VALIDATION_CASES=1,
+        VALIDATION_CASES=10,
         RANDOM_FLAG=True,
         SEED=111,
     ):
+        self.random_sampling = RANDOM_FLAG
+        self.seed = SEED
+        self.image_size = IMAGE_SIZE
         random.seed(SEED)    
+        
         
         volumes = {}
         masks = {}
-
         for (dirpath, _, filenames) in os.walk(IMAGES_DIR):
             image_slices = []
             mask_slices = []
@@ -54,7 +56,7 @@ class FLAIRDataset(Dataset):
         self.patients = sorted(volumes.keys())
 
         validation_patients = random.sample(self.patients, k=VALIDATION_CASES)
-        if SUBSET == "validation":
+        if SUBSET == "valid":
             # 10 for validation
             self.patients = validation_patients
         else:
@@ -72,10 +74,6 @@ class FLAIRDataset(Dataset):
                 sum([list(range(x)) for x in num_slices], []),
             )
         )
-
-        self.random_sampling = RANDOM_FLAG
-        self.seed = SEED
-        self.image_size = IMAGE_SIZE
 
     def __len__(self):
         return len(self.patient_slice_index)

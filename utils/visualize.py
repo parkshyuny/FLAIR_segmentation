@@ -1,16 +1,33 @@
 import matplotlib.pyplot as plt
 import numpy as np
 
-def sample_images(y_pred, y_true, step, subplots=(2,5), figsize=(22,8), save=False):
+def visualize_preds(y_pred, y_true, epoch, subplots=(2,5), figsize=(22,8), save=False):
     plt.figure(figsize=figsize)
 
-    for i, image in enumerate(y_true):
-        plt.subplot(subplots[0], subplots[1], i+1)
-        plt.imshow(image.permute(1, 2, 0))
-        plt.imshow(y_pred[i].permute(1, 2, 0), alpha=0.3, cmap='red')
+    y_pred = y_pred.detach()
+    y_true = y_true.detach()
+
+    loc = 1
+    for i, mask in enumerate(y_pred):
+        if i == 5: 
+            break
+        plt.subplot(subplots[0], subplots[1], loc)
+        plt.imshow(np.transpose(mask, (2, 1, 0)))
+        loc += 1
+
         plt.subplots_adjust(wspace=None, hspace=None)
         plt.axis('off')
 
+    for i, mask in enumerate(y_true):
+        if i == 5: 
+            break
+        plt.subplot(subplots[0], subplots[1], loc)
+        plt.imshow(np.transpose(mask, (2, 1, 0)))
+        loc += 1
+
+        plt.subplots_adjust(wspace=None, hspace=None)
+        plt.axis('off')
+        
     plt.tight_layout()
-    plt.savefig(f"step_{step}_prediction.png")
+    plt.savefig(f"predicted_masks/epoch_{epoch}_preds.png")
     plt.show()

@@ -2,6 +2,9 @@ import torch
 
 from torch import nn
 
+SEED = 111
+torch.manual_seed(SEED)
+
 class UNet(nn.Module):
     """
     U-Net model for image segmentation.
@@ -48,10 +51,10 @@ class EncoderBlock(nn.Module):
 
         self.down_convolution = nn.Sequential(
             nn.Conv2d(in_channels, out_channels, (3, 3), padding=1),
-            nn.BatchNorm2d(out_channels),
+            # nn.BatchNorm2d(out_channels),
             nn.ReLU(True),
             nn.Conv2d(out_channels, out_channels, (3, 3), padding=1),
-            nn.BatchNorm2d(out_channels),
+            # nn.BatchNorm2d(out_channels),
             nn.ReLU(True),
         )
 
@@ -77,7 +80,7 @@ class DecoderBlock(nn.Module):
         return self.conv(x)
 
 
-# from torchinfo import summary
+from torchinfo import summary
 
-# model = UNet()
-# summary(model, input_size=(1, 3, 256, 256))
+model = UNet()
+summary(model, input_size=(1, 3, 256, 256))
